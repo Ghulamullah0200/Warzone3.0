@@ -161,6 +161,24 @@ export default function Dashboard() {
     };
 
 
+    // ── Smart page-range helper ────────────────────────────────────────────
+    // Returns an array of page numbers and 'ellipsis' markers to display.
+    // Keeps a window of ±2 pages around current, always shows first & last.
+    function getPageRange(current: number, total: number): (number | 'ellipsis')[] {
+        if (total <= 1) return [];
+        const delta = 2;
+        const result: (number | 'ellipsis')[] = [];
+        const rangeLeft  = Math.max(2, current - delta);
+        const rangeRight = Math.min(total - 1, current + delta);
+
+        result.push(1);
+        if (rangeLeft > 2)          result.push('ellipsis');
+        for (let i = rangeLeft; i <= rangeRight; i++) result.push(i);
+        if (rangeRight < total - 1) result.push('ellipsis');
+        if (total > 1)              result.push(total);
+        return result;
+    }
+
     if (loading && cards.length === 0) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -338,35 +356,45 @@ export default function Dashboard() {
 
                     {/* Cards Pagination */}
                     {totalPages > 1 && (
-                        <div className="flex justify-center gap-2 mt-12 pb-8">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-50 hover:text-white border border-gray-800"
-                            >
-                                PREV
-                            </button>
-                            <div className="flex items-center gap-2">
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => setCurrentPage(pageNum)}
-                                        className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all border ${currentPage === pageNum
-                                            ? 'bg-red-600 text-black border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.4)]'
-                                            : 'bg-[#0a0a0a] text-gray-400 border-gray-800 hover:border-red-600/50'
+                        <div className="flex flex-col items-center gap-3 mt-12 pb-8">
+                            {/* Page counter */}
+                            <p className="text-[11px] text-gray-600 font-bold tracking-widest uppercase">
+                                Page <span className="text-red-500">{currentPage}</span> of {totalPages}
+                            </p>
+                            {/* Buttons row */}
+                            <div className="flex justify-center items-center gap-1.5 flex-wrap">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-30 hover:text-white border border-gray-800 text-xs font-bold tracking-widest transition-all hover:border-red-600/50"
+                                >
+                                    ← PREV
+                                </button>
+                                {getPageRange(currentPage, totalPages).map((p, idx) =>
+                                    p === 'ellipsis' ? (
+                                        <span key={`c-ellipsis-${idx}`} className="w-8 flex items-center justify-center text-gray-600 font-bold text-sm select-none">…</span>
+                                    ) : (
+                                        <button
+                                            key={`c-page-${p}`}
+                                            onClick={() => setCurrentPage(p as number)}
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all border ${
+                                                currentPage === p
+                                                    ? 'bg-red-600 text-black border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.4)] scale-110'
+                                                    : 'bg-[#0a0a0a] text-gray-400 border-gray-800 hover:border-red-600/50 hover:text-white'
                                             }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                ))}
+                                        >
+                                            {p}
+                                        </button>
+                                    )
+                                )}
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-30 hover:text-white border border-gray-800 text-xs font-bold tracking-widest transition-all hover:border-red-600/50"
+                                >
+                                    NEXT →
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-50 hover:text-white border border-gray-800"
-                            >
-                                NEXT
-                            </button>
                         </div>
                     )}
                 </>
@@ -438,35 +466,45 @@ export default function Dashboard() {
 
                     {/* Proxies Pagination */}
                     {proxiesTotalPages > 1 && (
-                        <div className="flex justify-center gap-2 mt-12 pb-8">
-                            <button
-                                onClick={() => setProxiesPage(p => Math.max(1, p - 1))}
-                                disabled={proxiesPage === 1}
-                                className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-50 hover:text-white border border-gray-800"
-                            >
-                                PREV
-                            </button>
-                            <div className="flex items-center gap-2">
-                                {Array.from({ length: proxiesTotalPages }, (_, i) => i + 1).map(pageNum => (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => setProxiesPage(pageNum)}
-                                        className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all border ${proxiesPage === pageNum
-                                            ? 'bg-red-600 text-black border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.4)]'
-                                            : 'bg-[#0a0a0a] text-gray-400 border-gray-800'
+                        <div className="flex flex-col items-center gap-3 mt-12 pb-8">
+                            {/* Page counter */}
+                            <p className="text-[11px] text-gray-600 font-bold tracking-widest uppercase">
+                                Page <span className="text-red-500">{proxiesPage}</span> of {proxiesTotalPages}
+                            </p>
+                            {/* Buttons row */}
+                            <div className="flex justify-center items-center gap-1.5 flex-wrap">
+                                <button
+                                    onClick={() => setProxiesPage(p => Math.max(1, p - 1))}
+                                    disabled={proxiesPage === 1}
+                                    className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-30 hover:text-white border border-gray-800 text-xs font-bold tracking-widest transition-all hover:border-red-600/50"
+                                >
+                                    ← PREV
+                                </button>
+                                {getPageRange(proxiesPage, proxiesTotalPages).map((p, idx) =>
+                                    p === 'ellipsis' ? (
+                                        <span key={`px-ellipsis-${idx}`} className="w-8 flex items-center justify-center text-gray-600 font-bold text-sm select-none">…</span>
+                                    ) : (
+                                        <button
+                                            key={`px-page-${p}`}
+                                            onClick={() => setProxiesPage(p as number)}
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all border ${
+                                                proxiesPage === p
+                                                    ? 'bg-red-600 text-black border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.4)] scale-110'
+                                                    : 'bg-[#0a0a0a] text-gray-400 border-gray-800 hover:border-red-600/50 hover:text-white'
                                             }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                ))}
+                                        >
+                                            {p}
+                                        </button>
+                                    )
+                                )}
+                                <button
+                                    onClick={() => setProxiesPage(p => Math.min(proxiesTotalPages, p + 1))}
+                                    disabled={proxiesPage === proxiesTotalPages}
+                                    className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-30 hover:text-white border border-gray-800 text-xs font-bold tracking-widest transition-all hover:border-red-600/50"
+                                >
+                                    NEXT →
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setProxiesPage(p => Math.min(proxiesTotalPages, p + 1))}
-                                disabled={proxiesPage === proxiesTotalPages}
-                                className="px-4 py-2 bg-[#0a0a0a] text-gray-400 rounded-lg disabled:opacity-50 hover:text-white border border-gray-800"
-                            >
-                                NEXT
-                            </button>
                         </div>
                     )}
                 </>
