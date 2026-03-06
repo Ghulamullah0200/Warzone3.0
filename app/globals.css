@@ -1,0 +1,363 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --font-family-inter: 'Inter', sans-serif;
+  --font-family-orbitron: 'Orbitron', sans-serif;
+  --font-family-mono: 'Share Tech Mono', monospace;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    /* Warzone Extras */
+    --bg-primary: #050505;
+    --bg-secondary: #0a0a0a;
+    --warzone-red: #ff0033;
+    --glow: #ff1a1a;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+:root {
+  --bg-primary: #050505;
+  --bg-secondary: #0a0a0a;
+  --accent: #ff0033;
+  --glow: #ff1a1a;
+  --text: #ffffff;
+  --text-dim: #e5e5e5;
+  --border: #333333;
+  --card-bg: #111111;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--accent);
+  color: white;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+  /* Simple White Arrow Cursor */
+  cursor: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.5 2.5L11.5 19.5L14.5 12.5L21.5 11.5L5.5 2.5Z" fill="white" stroke="black" stroke-width="1.5"/></svg>') 2 2, default;
+}
+
+/* Interactive elements hover state - hand cursor but styled */
+button,
+a,
+input,
+select,
+textarea,
+.clickable {
+  cursor: pointer;
+  cursor: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.5 2.5L11.5 19.5L14.5 12.5L21.5 11.5L5.5 2.5Z" fill="white" stroke="%23ff0033" stroke-width="1.5"/></svg>') 2 2, pointer;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Glitch text effect */
+.glitch {
+  position: relative;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch::before {
+  left: 2px;
+  text-shadow: -1px 0 var(--accent);
+  clip: rect(24px, 550px, 90px, 0);
+  animation: glitch-anim-2 4s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+  left: -2px;
+  text-shadow: -1px 0 #00ffff;
+  clip: rect(85px, 550px, 140px, 0);
+  animation: glitch-anim 3s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+  0% {
+    clip: rect(61px, 9999px, 90px, 0);
+  }
+
+  20% {
+    clip: rect(33px, 9999px, 65px, 0);
+  }
+
+  40% {
+    clip: rect(25px, 9999px, 99px, 0);
+  }
+
+  60% {
+    clip: rect(95px, 9999px, 36px, 0);
+  }
+
+  80% {
+    clip: rect(76px, 9999px, 11px, 0);
+  }
+
+  100% {
+    clip: rect(47px, 9999px, 82px, 0);
+  }
+}
+
+@keyframes glitch-anim-2 {
+  0% {
+    clip: rect(76px, 9999px, 44px, 0);
+  }
+
+  20% {
+    clip: rect(12px, 9999px, 100px, 0);
+  }
+
+  40% {
+    clip: rect(88px, 9999px, 3px, 0);
+  }
+
+  60% {
+    clip: rect(41px, 9999px, 62px, 0);
+  }
+
+  80% {
+    clip: rect(3px, 9999px, 93px, 0);
+  }
+
+  100% {
+    clip: rect(65px, 9999px, 19px, 0);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(20px);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.terminal-text {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--accent);
+  text-shadow: 0 0 2px var(--glow);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px var(--glow);
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Custom height for form elements */
+.h-13 {
+  height: 3.25rem;
+  /* 52px */
+}
+
+.cyber-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  color: white;
+  transition: all 0.3s ease;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.cyber-input:focus {
+  background: rgba(255, 0, 51, 0.05);
+  border-color: var(--accent);
+  box-shadow: 0 0 15px rgba(255, 0, 51, 0.1);
+}
+
+.cyber-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+/* 3D Transform Utilities */
+.transform-style-3d {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+.perspective-1000 {
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+
+.translate-z-1 {
+  -webkit-transform: translateZ(1px);
+  transform: translateZ(1px);
+}
+
+/* Remove browser autofill background color */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px black inset !important;
+  -webkit-text-fill-color: white !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* For Firefox */
+input:-moz-autofill,
+input:-moz-autofill:hover,
+input:-moz-autofill:focus {
+  box-shadow: 0 0 0 30px black inset !important;
+  color: white !important;
+}
+
+/* General autofill styling */
+input:autofill {
+  background-color: black !important;
+  color: white !important;
+}
