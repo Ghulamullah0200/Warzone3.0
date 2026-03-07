@@ -115,32 +115,32 @@ const cardTypes = ['VISA', 'MASTERCARD', 'AMEX', 'DISCOVER'];
 const luxuryTiers = [
     {
         tier: 'ELITE',
-        priceMin: 200000, priceMax: 350000,
-        limitMin: 500000, limitMax: 1000000,
+        priceMin: 500000, priceMax: 700000,
+        limitMin: 1000000, limitMax: 10000000,
         badge: 'ELITE',
     },
     {
         tier: 'PLATINUM ELITE',
-        priceMin: 350000, priceMax: 500000,
-        limitMin: 1000000, limitMax: 2500000,
+        priceMin: 350000, priceMax: 1800000,
+        limitMin: 2900000, limitMax: 5500000,
         badge: 'PLATINUM ELITE',
     },
     {
         tier: 'BLACK DIAMOND',
-        priceMin: 500000, priceMax: 750000,
-        limitMin: 2500000, limitMax: 5000000,
+        priceMin: 500000, priceMax: 2300000,
+        limitMin: 2700000, limitMax: 5000000,
         badge: 'BLACK DIAMOND',
     },
     {
         tier: 'ULTRA PREMIUM',
-        priceMin: 750000, priceMax: 1000000,
-        limitMin: 5000000, limitMax: 10000000,
+        priceMin: 1500000, priceMax: 6000000,
+        limitMin: 20000000, limitMax: 70000000,
         badge: 'ULTRA PREMIUM',
     },
     {
         tier: 'INFINITY BLACK',
-        priceMin: 1000000, priceMax: 2000000,
-        limitMin: 10000000, limitMax: 50000000,
+        priceMin: 6000000, priceMax: 30000000,
+        limitMin: 80000000, limitMax: 50000000,
         badge: 'INFINITY BLACK',
     },
 ];
@@ -223,8 +223,8 @@ async function main() {
 
     const CardModel = mongoose.models.Card || mongoose.model('Card', CardSchema);
 
-    const TOTAL_CARDS  = 1000;
-    const BATCH_SIZE   = 50;
+    const TOTAL_CARDS  = 2000;
+    const BATCH_SIZE   = 100;
     let totalInserted  = 0;
 
     console.log(`\n🚀 Starting insertion of ${TOTAL_CARDS} luxury cards (min price: $200,000)...\n`);
