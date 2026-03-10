@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '../../../lib/db';
 import { Card as CardModel } from '../../../lib/models';
-import { decryptCardData } from '../../../lib/encryption';
+import { decryptCardData, decrypt } from '../../../lib/encryption';
 import type { Card } from '../../../types';
 
 // ── Pakistani / South-Asian name tokens ───────────────────────────────────
@@ -86,31 +86,50 @@ export async function GET(request: NextRequest) {
         // ── Fetch ALL matching cards from DB (no DB-level skip/limit) ──────
         // We must filter by holder name AFTER decryption, so we can't rely on
         // DB-level pagination — instead we paginate in memory after filtering.
+        // To avoid heavy decryption (15+ fields) on every card, we only decrypt holder and cardNumber here.
         const allCards = await CardModel.find(baseFilter)
             .sort({ createdAt: -1 })
-            .lean();                          // lean() = faster plain objects
+            .select('_id title price description forSale cardNumber holder expiry bank type zip city state country userAgent videoLink proxy')
+            .lean();
 
         // ── Decrypt, filter Pakistani holder names, deduplicate ────────────
         const seen = new Set<string>();
-        const filtered: object[] = [];
+        const filtered: Record<string, unknown>[] = [];
 
-        for (const card of allCards) {
-            const decrypted = decryptCardData(card as Record<string, unknown>) as Card;
+        // removed local require to fix ESLint error
+        for (const card of allCards as Record<string, unknown>[]) {
+            const holderEncrypted = card.holder as string;
+            const cardNumberEncrypted = card.cardNumber as string;
+
+            const holder = holderEncrypted ? decrypt(holderEncrypted) : undefined;
 
             // 1. Skip Pakistani holder names
-            if (hasPakistaniName(decrypted.holder)) continue;
+            if (hasPakistaniName(holder)) continue;
+
+            const cardNumber = cardNumberEncrypted ? decrypt(cardNumberEncrypted) : '';
 
             // 2. Skip duplicate card numbers
-            const key = decrypted.cardNumber || String(card._id);
+            const key = cardNumber || String(card._id);
             if (seen.has(key)) continue;
             seen.add(key);
 
-            filtered.push({
+            filtered.push(card);
+        }
+
+        // ── In-memory pagination (correct page slice) ──────────────────────
+        const totalFiltered = filtered.length;
+        const startIdx = (page - 1) * limit;
+        const pageCardsRaw = filtered.slice(startIdx, startIdx + limit);
+
+        // Only fully decrypt the cards for this specific page
+        const pageCards = pageCardsRaw.map(card => {
+            const decrypted = decryptCardData(card) as Card;
+            return {
                 id: String(card._id),
-                title: (card as Record<string, unknown>).title,
-                price: (card as Record<string, unknown>).price,
-                description: (card as Record<string, unknown>).description,
-                forSale: (card as Record<string, unknown>).forSale,
+                title: card.title,
+                price: card.price,
+                description: card.description,
+                forSale: card.forSale,
                 cardNumber: maskCardNumber(decrypted.cardNumber ?? ''),
                 expiry: decrypted.expiry,
                 bank: decrypted.bank,
@@ -119,16 +138,11 @@ export async function GET(request: NextRequest) {
                 city: decrypted.city,
                 state: decrypted.state,
                 country: decrypted.country,
-                userAgent: (card as Record<string, unknown>).userAgent,
-                videoLink: (card as Record<string, unknown>).videoLink,
+                userAgent: card.userAgent,
+                videoLink: card.videoLink,
                 proxy: decrypted.proxy,
-            });
-        }
-
-        // ── In-memory pagination (correct page slice) ──────────────────────
-        const totalFiltered = filtered.length;
-        const startIdx = (page - 1) * limit;
-        const pageCards = filtered.slice(startIdx, startIdx + limit);
+            };
+        });
 
         return NextResponse.json({
             cards: pageCards,

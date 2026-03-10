@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import Image from 'next/image';
 
 import { Button } from '../../components/ui/button';
@@ -71,7 +72,17 @@ function LoginForm() {
                     router.push('/dashboard');
                 }
             } else {
-                setError(data.message || 'Invalid credentials');
+                if (data.expired) {
+                    toast.error('Your account has expired.', {
+                        description: 'Please pay the account fees again to renew your access.',
+                        duration: 5000,
+                    });
+                    setTimeout(() => {
+                        router.push(`/renew?username=${encodeURIComponent(data.username)}`);
+                    }, 2000);
+                } else {
+                    setError(data.message || data.error || 'Invalid credentials');
+                }
             }
         } catch (err) {
             console.error('Login error:', err);

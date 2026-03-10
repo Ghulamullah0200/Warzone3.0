@@ -46,15 +46,12 @@ export async function POST(req: NextRequest) {
                 success: true,
                 message: 'Deposit approved and balance updated',
             });
-        } else {
+        } else if (payment.type === 'SIGNUP') {
             // SIGNUP type
             const user = await User.findOne({ trxId });
 
             if (!user) {
                 console.warn('User not found for signup approval:', trxId);
-                // We proceed to approve the payment even if user is missing, or return error?
-                // If this is a signup payment, there SHOULD be a user. 
-                // But let's avoid crashing.
                 return NextResponse.json({ error: 'User link missing for this signup' }, { status: 404 });
             }
 
@@ -84,7 +81,37 @@ export async function POST(req: NextRequest) {
                 success: true,
                 message: 'User signup approved successfully',
             });
+        } else if (payment.type === 'RENEW') {
+            if (!payment.userId) {
+                return NextResponse.json({ error: 'Renew payment missing user ID' }, { status: 400 });
+            }
+
+            const user = await User.findById(payment.userId);
+            if (!user) {
+                return NextResponse.json({ error: 'User not found for renewal' }, { status: 404 });
+            }
+
+            // Extend expiry by 30 days from now
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            user.accountExpiresAt = expiryDate;
+
+            // Just in case user was NOT_APPROVED previously
+            user.status = 'APPROVED';
+
+            await user.save();
+
+            payment.status = 'APPROVED';
+            await payment.save();
+
+            // Optionally send renewal email if you want, skipping for simplicity unless needed
+            return NextResponse.json({
+                success: true,
+                message: 'Account renewal approved successfully',
+            });
         }
+
+        return NextResponse.json({ error: 'Unknown payment type' }, { status: 400 });
     } catch (error) {
         console.error('Approve error:', error);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });

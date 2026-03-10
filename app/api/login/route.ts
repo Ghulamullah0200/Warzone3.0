@@ -26,7 +26,11 @@ export async function POST(req: NextRequest) {
 
         // Check account expiry
         if (user.accountExpiresAt && new Date() > new Date(user.accountExpiresAt)) {
-            return NextResponse.json({ error: 'Account expired. Please renew subscription.' }, { status: 403 });
+            return NextResponse.json({
+                error: 'Account expired. Please renew subscription.',
+                expired: true,
+                username: user.username
+            }, { status: 403 });
         }
 
         return NextResponse.json({

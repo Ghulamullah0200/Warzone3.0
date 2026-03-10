@@ -59,7 +59,7 @@ const UserSchema = new Schema<IUser>({
 export interface IPayment extends Document {
     trxId: string;
     amount: number;
-    type: 'SIGNUP' | 'DEPOSIT';
+    type: 'SIGNUP' | 'DEPOSIT' | 'RENEW';
     userId?: string; // Optional, for deposits primarily
     status: 'PENDING' | 'APPROVED';
     createdAt: Date;
@@ -77,7 +77,7 @@ const PaymentSchema = new Schema<IPayment>({
     },
     type: {
         type: String,
-        enum: ['SIGNUP', 'DEPOSIT'],
+        enum: ['SIGNUP', 'DEPOSIT', 'RENEW'],
         required: true,
     },
     userId: {

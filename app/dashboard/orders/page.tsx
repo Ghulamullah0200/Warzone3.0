@@ -51,7 +51,6 @@ export default function Orders() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { if (user) fetchOrders(user.id, purchasesPage); }, [purchasesPage, user]);
     useEffect(() => { if (user) fetchProxyOrders(user.id, proxiesPage); }, [proxiesPage, user]);
     useEffect(() => { if (user) fetchPayments(user.id, depositsPage); }, [depositsPage, user]);

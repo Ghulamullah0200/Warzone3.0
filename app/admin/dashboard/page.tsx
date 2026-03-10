@@ -895,7 +895,6 @@ export default function AdminDashboard() {
     ].reduce((sum, order) => sum + (Number(order.price) || 0), 0);
     const totalUsers = users.length;
     const activeCards = cards.filter(c => c.forSale).length;
-    const activeProxies = proxies.filter(p => p.forSale).length;
 
     const handleLogout = () => {
         localStorage.removeItem('adminAuth');
