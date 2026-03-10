@@ -77,53 +77,18 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '9');
 
-        // DB-level filter: forSale + exclude Pakistani country
-        const baseFilter = {
-            forSale: true,
-            country: { $not: { $regex: /^pakistan$/i } },
-        } as Record<string, unknown>;
+        // ── Fetch only needed cards using DB-level pagination ────────────
+        const total = await CardModel.countDocuments({ forSale: true });
 
-        // ── Fetch ALL matching cards from DB (no DB-level skip/limit) ──────
-        // We must filter by holder name AFTER decryption, so we can't rely on
-        // DB-level pagination — instead we paginate in memory after filtering.
-        // To avoid heavy decryption (15+ fields) on every card, we only decrypt holder and cardNumber here.
-        const allCards = await CardModel.find(baseFilter)
+        const pageCardsRaw = await CardModel.find({ forSale: true })
             .sort({ createdAt: -1 })
-            .select('_id title price description forSale cardNumber holder expiry bank type zip city state country userAgent videoLink proxy')
+            .skip((page - 1) * limit)
+            .limit(limit)
             .lean();
-
-        // ── Decrypt, filter Pakistani holder names, deduplicate ────────────
-        const seen = new Set<string>();
-        const filtered: Record<string, unknown>[] = [];
-
-        // removed local require to fix ESLint error
-        for (const card of allCards as Record<string, unknown>[]) {
-            const holderEncrypted = card.holder as string;
-            const cardNumberEncrypted = card.cardNumber as string;
-
-            const holder = holderEncrypted ? decrypt(holderEncrypted) : undefined;
-
-            // 1. Skip Pakistani holder names
-            if (hasPakistaniName(holder)) continue;
-
-            const cardNumber = cardNumberEncrypted ? decrypt(cardNumberEncrypted) : '';
-
-            // 2. Skip duplicate card numbers
-            const key = cardNumber || String(card._id);
-            if (seen.has(key)) continue;
-            seen.add(key);
-
-            filtered.push(card);
-        }
-
-        // ── In-memory pagination (correct page slice) ──────────────────────
-        const totalFiltered = filtered.length;
-        const startIdx = (page - 1) * limit;
-        const pageCardsRaw = filtered.slice(startIdx, startIdx + limit);
 
         // Only fully decrypt the cards for this specific page
         const pageCards = pageCardsRaw.map(card => {
-            const decrypted = decryptCardData(card) as Card;
+            const decrypted = decryptCardData(card as Record<string, unknown>) as Card;
             return {
                 id: String(card._id),
                 title: card.title,
@@ -147,8 +112,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             cards: pageCards,
             pagination: {
-                total: totalFiltered,
-                pages: Math.ceil(totalFiltered / limit),
+                total,
+                pages: Math.ceil(total / limit),
                 current: page,
             },
         });

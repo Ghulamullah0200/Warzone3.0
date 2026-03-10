@@ -28,11 +28,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         await connectDB();
+        const { searchParams } = new URL(req.url);
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const skip = (page - 1) * limit;
+
+        // Count total for pagination
+        const total = await Card.countDocuments({});
+
         // Sort by forSale (true first), then createdAt (-1 for new first)
-        const cards = await Card.find({}).sort({ forSale: -1, createdAt: -1 });
+        const cards = await Card.find({})
+            .sort({ forSale: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
         const decryptedCards = cards.map(card => {
             const cardObj = card.toObject();
@@ -46,7 +57,13 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            cards: decryptedCards
+            cards: decryptedCards,
+            pagination: {
+                total,
+                page,
+                limit,
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         console.error('Fetch admin cards error:', error);

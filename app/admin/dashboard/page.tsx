@@ -55,17 +55,11 @@ export default function AdminDashboard() {
     const [editCardForm, setEditCardForm] = useState<Partial<Card>>({});
 
 
-    // Pagination for Cards
-    const [cardsPage, setCardsPage] = useState(1);
-    const cardsPerPage = 9;
-    const [cardsSearch, setCardsSearch] = useState('');
 
-    const [proxies, setProxies] = useState<Proxy[]>([]);
-    const [showAddProxy, setShowAddProxy] = useState(false);
-    const [editingProxy, setEditingProxy] = useState<Proxy | null>(null);
     const [proxiesPage, setProxiesPage] = useState(1);
+    const [totalProxiesPages, setTotalProxiesPages] = useState(1);
     const [proxiesSearch, setProxiesSearch] = useState('');
-    const proxiesPerPage = 9;
+    const proxiesPerPage = 12;
     const [newProxy, setNewProxy] = useState({
         title: '', price: '', description: '',
         host: '', port: '', username: '', password: '',
@@ -109,7 +103,18 @@ export default function AdminDashboard() {
     const alertsPerPage = 10;
     const [paymentsPage, setPaymentsPage] = useState(1);
     const paymentsPerPage = 40;
+    const [cardsPage, setCardsPage] = useState(1);
+    const [totalCardsPages, setTotalCardsPages] = useState(1);
+    const cardsPerPage = 12;
+    const [cardsSearch, setCardsSearch] = useState('');
+    const [proxies, setProxies] = useState<Proxy[]>([]);
+    const [showAddProxy, setShowAddProxy] = useState(false);
+    const [editingProxy, setEditingProxy] = useState<Proxy | null>(null);
 
+
+    const [usersPage, setUsersPage] = useState(1);
+    const [totalUsersPages, setTotalUsersPages] = useState(1);
+    const usersPerPage = 50;
     const [userSearch, setUserSearch] = useState('');
 
     // Notification State
@@ -209,15 +214,15 @@ export default function AdminDashboard() {
             return;
         }
         fetchPayments();
-        fetchCards();
+        fetchCards(cardsPage);
+        fetchProxies(proxiesPage);
         fetchOrders();
-        fetchUsers();
+        fetchUsers(usersPage);
         fetchBundleOrders();
         fetchAdminOffers();
         fetchSettings();
-        fetchProxies();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [router]);
+    }, [router, cardsPage, proxiesPage, usersPage]);
 
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
         setNotification({ message, type, id: Date.now() });
@@ -259,21 +264,23 @@ export default function AdminDashboard() {
         }
     };
 
-    const fetchCards = async () => {
+    const fetchCards = async (page = 1) => {
         try {
-            const response = await fetch('/api/admin/cards', { cache: 'no-store' });
+            const response = await fetch(`/api/admin/cards?page=${page}&limit=${cardsPerPage}`, { cache: 'no-store' });
             const data = await response.json();
             setCards(data.cards || []);
+            if (data.pagination) setTotalCardsPages(data.pagination.pages);
         } catch (error) {
             console.error('Failed to fetch cards:', error);
         }
     };
 
-    const fetchProxies = async () => {
+    const fetchProxies = async (page = 1) => {
         try {
-            const response = await fetch('/api/admin/proxies', { cache: 'no-store' });
+            const response = await fetch(`/api/admin/proxies?page=${page}&limit=${proxiesPerPage}`, { cache: 'no-store' });
             const data = await response.json();
             setProxies(data.proxies || []);
+            if (data.pagination) setTotalProxiesPages(data.pagination.pages);
         } catch (error) {
             console.error('Failed to fetch proxies:', error);
         }
@@ -475,10 +482,10 @@ export default function AdminDashboard() {
         }
     };
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (page: number = 1) => {
         try {
-            console.log('Fetching users...');
-            const response = await fetch('/api/admin/users', { cache: 'no-store' });
+            console.log('Fetching users page:', page);
+            const response = await fetch(`/api/admin/users?page=${page}&limit=${usersPerPage}`, { cache: 'no-store' });
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -499,6 +506,9 @@ export default function AdminDashboard() {
             }));
 
             setUsers(formattedUsers);
+            if (data.pagination) {
+                setTotalUsersPages(data.pagination.pages);
+            }
         } catch (error: unknown) {
             console.error('Failed to fetch users:', error);
             showNotification(`User Sync Failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -1698,7 +1708,7 @@ export default function AdminDashboard() {
                                 </h2>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={fetchCards}
+                                        onClick={() => fetchCards(cardsPage)}
                                         className="text-[9px] font-black text-gray-500 hover:text-(--accent) transition-colors tracking-widest uppercase flex items-center gap-1"
                                     >
                                         <Activity className="w-3 h-3" /> REFRESH DATA
@@ -1915,189 +1925,168 @@ export default function AdminDashboard() {
                             )}
                         </AnimatePresence>
 
-                        {/* Cards List */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {(() => {
-                                const filtered = cards.filter(c =>
-                                    (c.title || '').toLowerCase().includes(cardsSearch) ||
-                                    (c.country || '').toLowerCase().includes(cardsSearch) ||
-                                    (c.cardNumber || '').toLowerCase().includes(cardsSearch) ||
-                                    (c.bank || '').toLowerCase().includes(cardsSearch)
-                                );
-                                return filtered.slice((cardsPage - 1) * cardsPerPage, cardsPage * cardsPerPage)
-                                    .map((card, index) => (
+                            {(cards || [])
+                                .map((card, index) => (
+                                    <motion.div
+                                        key={card.id || (card as unknown as { _id: string })._id || `card-${index}`}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="group h-[260px] perspective-1000"
+                                    >
                                         <motion.div
-                                            key={card.id || (card as unknown as { _id: string })._id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            className="group h-[260px] perspective-1000"
+                                            className="relative w-full h-full transform-3d"
+                                            whileHover={{ rotateY: 180 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                         >
-                                            <motion.div
-                                                className="relative w-full h-full transform-3d"
-                                                whileHover={{ rotateY: 180 }}
-                                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                            >
-                                                {/* FRONT SIDE */}
-                                                <div className="absolute inset-0 backface-hidden z-10">
-                                                    <div className={`
+                                            {/* FRONT SIDE */}
+                                            <div className="absolute inset-0 backface-hidden z-10">
+                                                <div className={`
                                                             h-full w-full rounded-2xl overflow-hidden relative border border-white/10 flex flex-col justify-between
                                                             bg-linear-to-br from-[#1a1a1a] to-[#0a0a0a] shadow-2xl
                                                             ${!card.forSale ? 'grayscale-[0.8] opacity-60' : ''}
                                                         `}>
-                                                        {/* Animated holographic shine */}
-                                                        <div className="absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
+                                                    {/* Animated holographic shine */}
+                                                    <div className="absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
 
-                                                        {/* Card Header */}
-                                                        <div className="p-5 flex justify-between items-start">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[10px] font-black text-(--accent) tracking-widest uppercase mb-1">ASSET_TYPE</span>
-                                                                <h4 className="text-sm font-black text-white tracking-wider uppercase truncate max-w-[150px]">{card.title}</h4>
-                                                            </div>
-                                                            <div className="bg-white/5 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-lg text-xs font-black text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
-                                                                {card.price} USDT
-                                                            </div>
+                                                    {/* Card Header */}
+                                                    <div className="p-5 flex justify-between items-start">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-(--accent) tracking-widest uppercase mb-1">ASSET_TYPE</span>
+                                                            <h4 className="text-sm font-black text-white tracking-wider uppercase truncate max-w-[150px]">{card.title}</h4>
                                                         </div>
+                                                        <div className="bg-white/5 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-lg text-xs font-black text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                                                            {card.price} USDT
+                                                        </div>
+                                                    </div>
 
-                                                        {/* Card Chip & Number */}
-                                                        <div className="px-5 -mt-4">
-                                                            <div className="w-10 h-7 bg-linear-to-br from-yellow-300 to-yellow-600 rounded-md border border-black/20 shadow-inner flex items-center justify-center mb-4">
-                                                                <div className="w-full h-px bg-black/10"></div>
-                                                            </div>
-                                                            <p className="text-lg md:text-xl font-mono font-bold tracking-[0.15em] text-white/90 text-glow">
-                                                                {(card.cardNumber || '').substring(0, 4)} •••• •••• {(card.cardNumber || '').slice(-4)}
+                                                    {/* Card Chip & Number */}
+                                                    <div className="px-5 -mt-4">
+                                                        <div className="w-10 h-7 bg-linear-to-br from-yellow-300 to-yellow-600 rounded-md border border-black/20 shadow-inner flex items-center justify-center mb-4">
+                                                            <div className="w-full h-px bg-black/10"></div>
+                                                        </div>
+                                                        <p className="text-lg md:text-xl font-mono font-bold tracking-[0.15em] text-white/90 text-glow">
+                                                            {(card.cardNumber || '').substring(0, 4)} •••• •••• {(card.cardNumber || '').slice(-4)}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Bottom Info */}
+                                                    <div className="p-5 flex justify-between items-end border-t border-white/5 bg-black/20">
+                                                        <div>
+                                                            <p className="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Holder</p>
+                                                            <p className="text-[10px] font-mono font-bold text-gray-300 truncate max-w-[120px] uppercase">
+                                                                {card.holder || 'CONFIDENTIAL'}
                                                             </p>
                                                         </div>
-
-                                                        {/* Bottom Info */}
-                                                        <div className="p-5 flex justify-between items-end border-t border-white/5 bg-black/20">
-                                                            <div>
-                                                                <p className="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Holder</p>
-                                                                <p className="text-[10px] font-mono font-bold text-gray-300 truncate max-w-[120px] uppercase">
-                                                                    {card.holder || 'CONFIDENTIAL'}
-                                                                </p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Exp / Type</p>
-                                                                <p className="text-[10px] font-mono font-bold text-gray-300">
-                                                                    {card.expiry} <span className="text-(--accent) ml-1 font-black">{card.type || 'ASSET'}</span>
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Sold Overlay Banner */}
-                                                        {!card.forSale && (
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] z-20 pointer-events-none">
-                                                                <div className="bg-red-600 text-white px-6 py-1.5 font-black text-[10px] tracking-[0.3em] uppercase -rotate-12 border-2 border-white/20 shadow-2xl">
-                                                                    TERMINATED / SOLD
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* BACK SIDE */}
-                                                <div className="absolute inset-0 backface-hidden transform-[rotateY(180deg)] z-20">
-                                                    <div className="h-full w-full rounded-2xl bg-[#0a0a0a] border-2 border-(--accent)/30 overflow-hidden relative flex flex-col shadow-2xl">
-                                                        {/* Magnetic Strip */}
-                                                        <div className="w-full h-10 bg-black mt-6"></div>
-
-                                                        <div className="p-6 space-y-4">
-                                                            <div className="flex justify-between items-center">
-                                                                <div className="bg-white/90 h-8 w-2/3 flex items-center justify-end px-3 rounded shadow-inner">
-                                                                    <span className="font-mono text-black font-black tracking-widest text-xs">{card.cvv || 'XXX'}</span>
-                                                                </div>
-                                                                <span className="text-[10px] font-black text-(--accent) tracking-widest">CVC_CORE</span>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-2 gap-2 mt-4">
-                                                                <div className="bg-white/5 p-2 rounded border border-white/5">
-                                                                    <p className="text-[7px] text-gray-500 font-bold uppercase mb-1">Bank</p>
-                                                                    <p className="text-[9px] font-bold text-white truncate uppercase">{card.bank || 'N/A'}</p>
-                                                                </div>
-                                                                <div className="bg-white/5 p-2 rounded border border-white/5">
-                                                                    <p className="text-[7px] text-gray-500 font-bold uppercase mb-1">Source IP</p>
-                                                                    <p className="text-[9px] font-mono text-gray-400">{card.ip || '---.---.---'}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Action Buttons Layer */}
-                                                        <div className="mt-auto p-4 flex gap-2 bg-black/50 border-t border-white/10 backdrop-blur-sm">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setEditingCard(card);
-                                                                    setEditCardForm({ ...card });
-                                                                }}
-                                                                className="flex-1 py-2 bg-blue-600/10 hover:bg-blue-600 border border-blue-600/30 text-blue-400 hover:text-white transition-all text-[9px] font-black tracking-widest uppercase rounded cursor-pointer"
-                                                            >
-                                                                EDIT
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteCard(card.id || (card as unknown as { _id: string })._id);
-                                                                }}
-                                                                className="flex-1 py-2 bg-red-600/10 hover:bg-red-600 border border-red-600/30 text-red-500 hover:text-white transition-all text-[9px] font-black tracking-widest uppercase rounded cursor-pointer"
-                                                            >
-                                                                PURGE
-                                                            </button>
+                                                        <div className="text-right">
+                                                            <p className="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Exp / Type</p>
+                                                            <p className="text-[10px] font-mono font-bold text-gray-300">
+                                                                {card.expiry} <span className="text-(--accent) ml-1 font-black">{card.type || 'ASSET'}</span>
+                                                            </p>
                                                         </div>
                                                     </div>
+
+                                                    {/* Sold Overlay Banner */}
+                                                    {!card.forSale && (
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] z-20 pointer-events-none">
+                                                            <div className="bg-red-600 text-white px-6 py-1.5 font-black text-[10px] tracking-[0.3em] uppercase -rotate-12 border-2 border-white/20 shadow-2xl">
+                                                                TERMINATED / SOLD
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </motion.div>
+                                            </div>
+
+                                            {/* BACK SIDE */}
+                                            <div className="absolute inset-0 backface-hidden transform-[rotateY(180deg)] z-20">
+                                                <div className="h-full w-full rounded-2xl bg-[#0a0a0a] border-2 border-(--accent)/30 overflow-hidden relative flex flex-col shadow-2xl">
+                                                    {/* Magnetic Strip */}
+                                                    <div className="w-full h-10 bg-black mt-6"></div>
+
+                                                    <div className="p-6 space-y-4">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="bg-white/90 h-8 w-2/3 flex items-center justify-end px-3 rounded shadow-inner">
+                                                                <span className="font-mono text-black font-black tracking-widest text-xs">{card.cvv || 'XXX'}</span>
+                                                            </div>
+                                                            <span className="text-[10px] font-black text-(--accent) tracking-widest">CVC_CORE</span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-2 mt-4">
+                                                            <div className="bg-white/5 p-2 rounded border border-white/5">
+                                                                <p className="text-[7px] text-gray-500 font-bold uppercase mb-1">Bank</p>
+                                                                <p className="text-[9px] font-bold text-white truncate uppercase">{card.bank || 'N/A'}</p>
+                                                            </div>
+                                                            <div className="bg-white/5 p-2 rounded border border-white/5">
+                                                                <p className="text-[7px] text-gray-500 font-bold uppercase mb-1">Source IP</p>
+                                                                <p className="text-[9px] font-mono text-gray-400">{card.ip || '---.---.---'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Action Buttons Layer */}
+                                                    <div className="mt-auto p-4 flex gap-2 bg-black/50 border-t border-white/10 backdrop-blur-sm">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingCard(card);
+                                                                setEditCardForm({ ...card });
+                                                            }}
+                                                            className="flex-1 py-2 bg-blue-600/10 hover:bg-blue-600 border border-blue-600/30 text-blue-400 hover:text-white transition-all text-[9px] font-black tracking-widest uppercase rounded cursor-pointer"
+                                                        >
+                                                            EDIT
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteCard(card.id || (card as unknown as { _id: string })._id);
+                                                            }}
+                                                            className="flex-1 py-2 bg-red-600/10 hover:bg-red-600 border border-red-600/30 text-red-500 hover:text-white transition-all text-[9px] font-black tracking-widest uppercase rounded cursor-pointer"
+                                                        >
+                                                            PURGE
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </motion.div>
-                                    ));
-                            })()}
+                                    </motion.div>
+                                ))}
                         </div>
 
-                        {/* Cards Pagination Controls */}
-                        {(() => {
-                            const filteredCount = cards.filter(c =>
-                                (c.title || '').toLowerCase().includes(cardsSearch) ||
-                                (c.country || '').toLowerCase().includes(cardsSearch) ||
-                                (c.cardNumber || '').toLowerCase().includes(cardsSearch) ||
-                                (c.bank || '').toLowerCase().includes(cardsSearch)
-                            ).length;
-
-                            if (filteredCount <= cardsPerPage) return null;
-
-                            return (
-                                <div className="mt-8 flex justify-center gap-2 pb-8">
-                                    <button
-                                        onClick={() => setCardsPage(p => Math.max(1, p - 1))}
-                                        disabled={cardsPage === 1}
-                                        className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12"
-                                    >
-                                        <span className="block skew-x-12">PREV</span>
-                                    </button>
-                                    <div className="flex items-center gap-2">
-                                        {Array.from({ length: Math.ceil(filteredCount / cardsPerPage) }, (_, i) => i + 1)
-                                            .slice(Math.max(0, cardsPage - 3), Math.min(Math.ceil(filteredCount / cardsPerPage), cardsPage + 2))
-                                            .map(pageNum => (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => setCardsPage(pageNum)}
-                                                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black transition-all -skew-x-12 ${cardsPage === pageNum
-                                                        ? 'bg-(--accent) text-black shadow-[0_0_15px_var(--accent)]'
-                                                        : 'bg-[#1a1a1a] text-gray-400 hover:text-white'
-                                                        }`}
-                                                >
-                                                    <span className="block skew-x-12">{pageNum}</span>
-                                                </button>
-                                            ))}
-                                    </div>
-                                    <button
-                                        onClick={() => setCardsPage(p => Math.min(Math.ceil(filteredCount / cardsPerPage), p + 1))}
-                                        disabled={cardsPage === Math.ceil(filteredCount / cardsPerPage)}
-                                        className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12"
-                                    >
-                                        <span className="block skew-x-12">NEXT</span>
-                                    </button>
+                        {totalCardsPages > 1 && (
+                            <div className="mt-8 flex justify-center gap-2 pb-8">
+                                <button
+                                    onClick={() => setCardsPage(p => Math.max(1, p - 1))}
+                                    disabled={cardsPage === 1}
+                                    className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12"
+                                >
+                                    <span className="block skew-x-12">PREV</span>
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    {Array.from({ length: totalCardsPages }, (_, i) => i + 1)
+                                        .slice(Math.max(0, cardsPage - 3), Math.min(totalCardsPages, cardsPage + 2))
+                                        .map(pageNum => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setCardsPage(pageNum)}
+                                                className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black transition-all -skew-x-12 ${cardsPage === pageNum
+                                                    ? 'bg-(--accent) text-black shadow-[0_0_15px_var(--accent)]'
+                                                    : 'bg-[#1a1a1a] text-gray-400 hover:text-white'
+                                                    }`}
+                                            >
+                                                <span className="block skew-x-12">{pageNum}</span>
+                                            </button>
+                                        ))}
                                 </div>
-                            );
-                        })()}
+                                <button
+                                    onClick={() => setCardsPage(p => Math.min(totalCardsPages, p + 1))}
+                                    disabled={cardsPage === totalCardsPages}
+                                    className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12"
+                                >
+                                    <span className="block skew-x-12">NEXT</span>
+                                </button>
+                            </div>
+                        )}
 
                         {cards.length === 0 && !showAddCard && (
                             <div className="p-12 border border-dashed border-(--border) rounded-lg text-center bg-(--bg-secondary)/50">
@@ -2120,7 +2109,7 @@ export default function AdminDashboard() {
                                 </h2>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={fetchProxies}
+                                        onClick={() => fetchProxies(proxiesPage)}
                                         className="text-[9px] font-black text-gray-500 hover:text-(--accent) transition-colors tracking-widest uppercase flex items-center gap-1"
                                     >
                                         <Activity className="w-3 h-3" /> REFRESH DATA
@@ -2300,113 +2289,112 @@ export default function AdminDashboard() {
                             )}
                         </AnimatePresence>
 
-                        {/* Proxies List */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {(() => {
-                                const filtered = proxies.filter(p =>
-                                    (p.title || '').toLowerCase().includes(proxiesSearch) ||
-                                    (p.country || '').toLowerCase().includes(proxiesSearch) ||
-                                    (p.host || '').toLowerCase().includes(proxiesSearch) ||
-                                    (p.type || '').toLowerCase().includes(proxiesSearch)
-                                );
-                                return filtered.slice((proxiesPage - 1) * proxiesPerPage, proxiesPage * proxiesPerPage)
-                                    .map((proxy, index) => (
-                                        <motion.div
-                                            key={proxy.id}
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            className="group h-[260px] perspective-1000"
-                                        >
-                                            <motion.div className="relative w-full h-full transform-3d" whileHover={{ rotateY: 180 }}>
-                                                {/* FRONT */}
-                                                <div className="absolute inset-0 backface-hidden z-10">
-                                                    <div className={`h-full w-full rounded-2xl overflow-hidden relative border border-white/10 flex flex-col justify-between bg-linear-to-br from-[#121212] to-[#050505] inset-shadow-sm ${!proxy.forSale ? 'grayscale opacity-60' : ''}`}>
-                                                        <div className="p-5 flex justify-between items-start">
-                                                            <div>
-                                                                <span className="text-[9px] font-black text-(--accent) tracking-widest uppercase">{proxy.type}</span>
-                                                                <h4 className="text-sm font-black text-white truncate max-w-[150px] uppercase">{proxy.title}</h4>
-                                                            </div>
-                                                            <div className="bg-green-500/10 border border-green-500/30 px-3 py-1 rounded text-xs font-black text-green-500">
-                                                                {proxy.price} USDT
-                                                            </div>
+                            {(proxies || [])
+                                .map((proxy, index) => (
+                                    <motion.div
+                                        key={proxy.id}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="group h-[260px] perspective-1000"
+                                    >
+                                        <motion.div className="relative w-full h-full transform-3d" whileHover={{ rotateY: 180 }}>
+                                            {/* FRONT */}
+                                            <div className="absolute inset-0 backface-hidden z-10">
+                                                <div className={`h-full w-full rounded-2xl overflow-hidden relative border border-white/10 flex flex-col justify-between bg-linear-to-br from-[#121212] to-[#050505] inset-shadow-sm ${!proxy.forSale ? 'grayscale opacity-60' : ''}`}>
+                                                    <div className="p-5 flex justify-between items-start">
+                                                        <div>
+                                                            <span className="text-[9px] font-black text-(--accent) tracking-widest uppercase">{proxy.type}</span>
+                                                            <h4 className="text-sm font-black text-white truncate max-w-[150px] uppercase">{proxy.title}</h4>
                                                         </div>
-                                                        <div className="px-5">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Globe className="w-4 h-4 text-gray-600" />
-                                                                    <span className="text-xs font-black text-white/80 uppercase">{proxy.country}</span>
-                                                                </div>
-                                                                {proxy.pdfUrl && <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 flex items-center gap-1 font-black"><FileText className="w-2.5 h-2.5" /> PDF_ATTACHED</span>}
-                                                            </div>
-                                                            <p className="text-lg font-mono font-bold text-gray-400">
-                                                                {proxy.host.substring(0, 10)}... : {proxy.port}
-                                                            </p>
+                                                        <div className="bg-green-500/10 border border-green-500/30 px-3 py-1 rounded text-xs font-black text-green-500">
+                                                            {proxy.price} USDT
                                                         </div>
-                                                        <div className="p-5 bg-black/40 border-t border-white/5 flex justify-between items-center">
-                                                            <span className="text-[8px] text-gray-600 font-bold uppercase">{proxy.city || 'GLOBAL NODE'}</span>
-                                                            {!proxy.forSale && <span className="text-[9px] font-black text-red-600">SOLD</span>}
+                                                    </div>
+                                                    <div className="px-5">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Globe className="w-4 h-4 text-gray-600" />
+                                                                <span className="text-xs font-black text-white/80 uppercase">{proxy.country}</span>
+                                                            </div>
+                                                            {proxy.pdfUrl && <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 flex items-center gap-1 font-black"><FileText className="w-2.5 h-2.5" /> PDF_ATTACHED</span>}
+                                                        </div>
+                                                        <p className="text-lg font-mono font-bold text-gray-400">
+                                                            {proxy.host.substring(0, 10)}... : {proxy.port}
+                                                        </p>
+                                                    </div>
+                                                    <div className="p-5 bg-black/40 border-t border-white/5 flex justify-between items-center">
+                                                        <span className="text-[8px] text-gray-600 font-bold uppercase">{proxy.city || 'GLOBAL NODE'}</span>
+                                                        {!proxy.forSale && <span className="text-[9px] font-black text-red-600">SOLD</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {/* BACK */}
+                                            <div className="absolute inset-0 backface-hidden transform-[rotateY(180deg)] z-20">
+                                                <div className="h-full w-full rounded-2xl bg-[#0a0a0a] border-2 border-(--accent)/30 p-6 flex flex-col items-center justify-center gap-4">
+                                                    <div className="w-full space-y-3">
+                                                        <div className="bg-white/5 p-2 rounded border border-white/5">
+                                                            <p className="text-[8px] text-gray-500 uppercase">Username</p>
+                                                            <p className="text-[10px] text-white font-mono">{proxy.username || 'NONE'}</p>
+                                                        </div>
+                                                        <div className="bg-white/5 p-2 rounded border border-white/5">
+                                                            <p className="text-[8px] text-gray-500 uppercase">Password</p>
+                                                            <p className="text-[10px] text-white font-mono">{proxy.password || 'NONE'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 w-full mt-auto">
+                                                        {proxy.pdfUrl && (
+                                                            <a href={proxy.pdfUrl} target="_blank" rel="noopener noreferrer" className="w-full py-2 bg-green-600/20 border border-green-600/30 text-green-500 text-[10px] font-black uppercase rounded hover:bg-green-600 hover:text-white transition-all flex items-center justify-center gap-2 mb-1">
+                                                                <FileText className="w-3 h-3" /> View Manual
+                                                            </a>
+                                                        )}
+                                                        <div className="flex gap-2 w-full">
+                                                            <button onClick={() => { setEditingProxy(proxy); }} className="flex-1 py-2 bg-blue-600/20 border border-blue-600/30 text-blue-400 text-[10px] font-black uppercase rounded hover:bg-blue-600 hover:text-white transition-all">Edit</button>
+                                                            <button onClick={() => handleDeleteProxy(proxy.id!)} className="flex-1 py-2 bg-red-600/20 border border-red-600/30 text-red-500 text-[10px] font-black uppercase rounded hover:bg-red-600 hover:text-white transition-all">Purge</button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                {/* BACK */}
-                                                <div className="absolute inset-0 backface-hidden transform-[rotateY(180deg)] z-20">
-                                                    <div className="h-full w-full rounded-2xl bg-[#0a0a0a] border-2 border-(--accent)/30 p-6 flex flex-col items-center justify-center gap-4">
-                                                        <div className="w-full space-y-3">
-                                                            <div className="bg-white/5 p-2 rounded border border-white/5">
-                                                                <p className="text-[8px] text-gray-500 uppercase">Username</p>
-                                                                <p className="text-[10px] text-white font-mono">{proxy.username || 'NONE'}</p>
-                                                            </div>
-                                                            <div className="bg-white/5 p-2 rounded border border-white/5">
-                                                                <p className="text-[8px] text-gray-500 uppercase">Password</p>
-                                                                <p className="text-[10px] text-white font-mono">{proxy.password || 'NONE'}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex flex-col gap-2 w-full mt-auto">
-                                                            {proxy.pdfUrl && (
-                                                                <a href={proxy.pdfUrl} target="_blank" rel="noopener noreferrer" className="w-full py-2 bg-green-600/20 border border-green-600/30 text-green-500 text-[10px] font-black uppercase rounded hover:bg-green-600 hover:text-white transition-all flex items-center justify-center gap-2 mb-1">
-                                                                    <FileText className="w-3 h-3" /> View Manual
-                                                                </a>
-                                                            )}
-                                                            <div className="flex gap-2 w-full">
-                                                                <button onClick={() => { setEditingProxy(proxy); }} className="flex-1 py-2 bg-blue-600/20 border border-blue-600/30 text-blue-400 text-[10px] font-black uppercase rounded hover:bg-blue-600 hover:text-white transition-all">Edit</button>
-                                                                <button onClick={() => handleDeleteProxy(proxy.id!)} className="flex-1 py-2 bg-red-600/20 border border-red-600/30 text-red-500 text-[10px] font-black uppercase rounded hover:bg-red-600 hover:text-white transition-all">Purge</button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </motion.div>
+                                            </div>
                                         </motion.div>
-                                    ));
-                            })()}
+                                    </motion.div>
+                                ))}
                         </div>
 
-                        {/* Proxy Pagination */}
-                        {(() => {
-                            const filteredCount = proxies.filter(p =>
-                                (p.title || '').toLowerCase().includes(proxiesSearch) ||
-                                (p.country || '').toLowerCase().includes(proxiesSearch) ||
-                                (p.host || '').toLowerCase().includes(proxiesSearch)
-                            ).length;
-                            if (filteredCount <= proxiesPerPage) return null;
-                            return (
-                                <div className="mt-8 flex justify-center gap-2 pb-8">
-                                    <button onClick={() => setProxiesPage(p => Math.max(1, p - 1))} disabled={proxiesPage === 1} className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12">
-                                        <span className="block skew-x-12">PREV</span>
-                                    </button>
-                                    <div className="flex items-center gap-2">
-                                        {Array.from({ length: Math.ceil(filteredCount / proxiesPerPage) }, (_, i) => i + 1).map(pageNum => (
-                                            <button key={pageNum} onClick={() => setProxiesPage(pageNum)} className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black transition-all -skew-x-12 ${proxiesPage === pageNum ? 'bg-(--accent) text-black shadow-[0_0_15px_var(--accent)]' : 'bg-[#1a1a1a] text-gray-400 hover:text-white'}`}>
+                        {totalProxiesPages > 1 && (
+                            <div className="mt-8 flex justify-center gap-2 pb-8">
+                                <button
+                                    onClick={() => setProxiesPage(p => Math.max(1, p - 1))}
+                                    disabled={proxiesPage === 1}
+                                    className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12"
+                                >
+                                    <span className="block skew-x-12">PREV</span>
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    {Array.from({ length: totalProxiesPages }, (_, i) => i + 1)
+                                        .slice(Math.max(0, proxiesPage - 3), Math.min(totalProxiesPages, proxiesPage + 2))
+                                        .map(pageNum => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setProxiesPage(pageNum)}
+                                                className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black transition-all -skew-x-12 ${proxiesPage === pageNum
+                                                    ? 'bg-(--accent) text-black shadow-[0_0_15px_var(--accent)]'
+                                                    : 'bg-[#1a1a1a] text-gray-400 hover:text-white'
+                                                    }`}
+                                            >
                                                 <span className="block skew-x-12">{pageNum}</span>
                                             </button>
                                         ))}
-                                    </div>
-                                    <button onClick={() => setProxiesPage(p => Math.min(Math.ceil(filteredCount / proxiesPerPage), p + 1))} disabled={proxiesPage === Math.ceil(filteredCount / proxiesPerPage)} className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12">
-                                        <span className="block skew-x-12">NEXT</span>
-                                    </button>
                                 </div>
-                            );
-                        })()}
+                                <button
+                                    onClick={() => setProxiesPage(p => Math.min(totalProxiesPages, p + 1))}
+                                    disabled={proxiesPage === totalProxiesPages}
+                                    className="px-6 py-2 bg-[#1a1a1a] text-gray-400 rounded-lg disabled:opacity-50 hover:bg-(--accent) hover:text-black transition-all text-xs font-black tracking-widest -skew-x-12"
+                                >
+                                    <span className="block skew-x-12">NEXT</span>
+                                </button>
+                            </div>
+                        )}
 
                         {proxies.length === 0 && !showAddProxy && (
                             <div className="p-12 border border-dashed border-(--border) rounded-lg text-center bg-(--bg-secondary)/50">
@@ -2764,6 +2752,40 @@ export default function AdminDashboard() {
                                     </motion.div>
                                 ))}
                         </div>
+                        {totalUsersPages > 1 && (
+                            <div className="mt-12 flex justify-center gap-2 pb-8">
+                                <button
+                                    onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                                    disabled={usersPage === 1}
+                                    className="px-6 py-3 bg-[#0a0a0a] text-gray-500 rounded-xl border border-white/5 disabled:opacity-30 hover:border-(--accent) hover:text-(--accent) transition-all text-xs font-black tracking-widest -skew-x-12 uppercase"
+                                >
+                                    <span className="block skew-x-12">PREV</span>
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    {Array.from({ length: totalUsersPages }, (_, i) => i + 1)
+                                        .slice(Math.max(0, usersPage - 3), Math.min(totalUsersPages, usersPage + 2))
+                                        .map(pageNum => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setUsersPage(pageNum)}
+                                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black transition-all -skew-x-12 border ${usersPage === pageNum
+                                                    ? 'bg-(--accent) text-black border-(--accent) shadow-[0_0_15px_var(--accent)]'
+                                                    : 'bg-[#0a0a0a] text-gray-500 border-white/5 hover:border-white/20'
+                                                    }`}
+                                            >
+                                                <span className="block skew-x-12">{pageNum}</span>
+                                            </button>
+                                        ))}
+                                </div>
+                                <button
+                                    onClick={() => setUsersPage(p => Math.min(totalUsersPages, p + 1))}
+                                    disabled={usersPage === totalUsersPages}
+                                    className="px-6 py-3 bg-[#0a0a0a] text-gray-500 rounded-xl border border-white/5 disabled:opacity-30 hover:border-(--accent) hover:text-(--accent) transition-all text-xs font-black tracking-widest -skew-x-12 uppercase"
+                                >
+                                    <span className="block skew-x-12">NEXT</span>
+                                </button>
+                            </div>
+                        )}
 
                         {users.length === 0 && (
                             <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
